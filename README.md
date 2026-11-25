@@ -1,108 +1,112 @@
-# 🚘 Number Plate Generator
+# Number Plate Generator 🚘
 
-A Java-based application that generates UK-style car number plates using a memory tag and registration date. It ensures uniqueness across sessions and adheres to UK number plate format rules.
+**A Java program that generates unique UK-style car number plates (like `YC19 XUE`) from a memory tag and a registration date. It works out the correct age identifier, never repeats a plate, even across runs, and is built around the Factory and Observer design patterns.**
 
----
-
-## Table of Contents
-
-1. [Features](#-features)
-2. [Number Plate Format](#-number-plate-format)
-3. [Components](#️-components)
-4. [Technologies](#-technologies)
-5. [Design Patterns Used](#-design-patterns-used)
-6. [How to Run](#-how-to-run)
-7. [Improvements](#improvements)
-8. [License](#license)
-
-
-
-## ✨ Features
-
-- ✅ Generates number plates in the format: `XX00 XXX`
-- 📅 Calculates the correct age identifier based on registration date
-- ♻️ Ensures uniqueness — checks and stores plates persistently
-- 🧱 Implements Design Patterns:
-  - **Factory** for generator instantiation
-  - **Observer** to log and monitor plate generation
-- 💾 Stores all generated plates in `generated_plates.txt`
+> 🧩 Pure Java with no external libraries. A small, clean example of object-oriented design.
 
 ---
 
-## 🧠 Number Plate Format
+## How it works
 
-Each number plate follows this format:
+```
+ memory tag "YC" ─┐
+                  ├─▶ AgeIdentifierCalculator ─▶ "19" ─┐
+ date 04/07/2019 ─┘                                    ├─▶ "YC19 XUE" ─▶ unique? ─▶ save + notify
+                      RandomLetterGenerator  ─▶ "XUE" ─┘                   │ no
+                                                                           └─▶ try new letters
+```
 
-MemoryTag + AgeIdentifier + " " + RandomLetters Example: YC19 XUE
-### 🧩 Components
-
-- **Memory Tag**: 2-letter code (e.g., `YC`, `LT`, `FF`)
-- **Age Identifier**:
-  - March to August → last two digits of the year (e.g., `2019` → `19`)
-  - September to February → last two digits + `50` (e.g., `Feb 2003` → `53`)
-- **Random Letters**: 3 uppercase letters (excluding `I` and `Q`)
-
----
-
-## 🔧 Technologies
-
-- Java 17 or higher
-- No external libraries — pure Java (`BufferedReader`, `FileWriter`, etc.)
-- Follows clean object-oriented design
+1. **Memory tag.** You pass in the two-letter area code, for example `YC`, `LT` or `FF`.
+2. **Age identifier.** The registration date (`dd/MM/yyyy`) is turned into two digits using the UK rules:
+   - **March to August:** the last two digits of the year. `04/07/2019` → **19**
+   - **September to December:** the last two digits of the year + 50. `15/09/2019` → **69**
+   - **January and February:** still part of the *previous* September period, so the previous year + 50. `23/01/2003` → **52**
+3. **Random letters.** Three random capital letters are added, never using `I` or `Q`.
+4. **Uniqueness.** The plate is checked against every plate generated before (stored in `generated_plates.txt`). If it already exists, new letters are drawn until it's unique.
+5. **Notify and save.** Observers are told about the new plate (the built-in logger prints it), and the plate is added to the file.
 
 ---
 
-## 🛠️ Design Patterns Used
+## Features
 
-Factory Pattern:
-The factory pattern is used to instantiate the correct number plate generator based on the requirements (e.g., date and memory tag generation).
-
-Observer Pattern:
-The observer pattern is implemented to log and track the generated number plates, providing real-time updates on plate generation.
+| | Feature |
+|---|---|
+| 🇬🇧 | UK plate format: memory tag + age identifier + 3 random letters |
+| 📅 | Correct age identifier for every month, including the January/February rule |
+| 🔤 | Random letters that skip `I` and `Q` |
+| ♻️ | Uniqueness checked across runs using a saved file |
+| 🏭 | **Factory pattern:** `GenerateFactory` creates the letter generator and age calculator |
+| 👀 | **Observer pattern:** `PlateObserver`s are notified of every new plate (`PlateLogger` prints it) |
 
 ---
 
-## 🚀 How to Run
+## Tech stack
 
-You can use any IDE like IntelliJ or run via terminal:
+| Area | Technology |
+|---|---|
+| Language | Java 21 (the IntelliJ project's level; no newer language features are needed) |
+| Libraries | None, only the Java standard library (`java.time`, `java.io`) |
+| Storage | Plain text file (`generated_plates.txt`) |
 
-### 🧪 Compile
+### Project structure
+
+```
+src/com/numberplate/
+  Main.java                       ← Generates three example plates
+  service/
+    NumberPlateService.java       ← Puts the plate together and keeps it unique
+    AgeIdentifierCalculator.java  ← Date → two-digit age identifier
+    RandomLetterGenerator.java    ← Three random letters (no I or Q)
+    GenerateFactory.java          ← Factory for the generators
+  storage/
+    PlateRepository.java          ← Reads and saves generated_plates.txt
+  Observer/
+    Observer.java                 ← Keeps the list of observers and notifies them
+    PlateObserver.java            ← Observer interface
+    PlateLogger.java              ← Prints each new plate
+```
+
+---
+
+## Getting started
+
+**Requirements:** a JDK (21 recommended)
+
+**In an IDE:** open the folder in IntelliJ IDEA and run `Main`.
+
+**From a terminal:** run these from the project folder:
+
+```bash
+javac -d out $(find src -name "*.java")
+```
 
 ```bash
 java -cp out com.numberplate.Main
 ```
 
+### Sample output
 
-### 📁 Output Sample
 ```text
-YC19 XUE
-LT53 LLP
-FF32 RFW
+New plate generated: YC19 XTM
+New plate generated: LT52 DVK
+New plate generated: FF32 ULW
 ```
 
-### 📁 Output Sample
-text
-YC19 XUE
-LT53 LLP
-FF32 RFW
+The letters are random, so yours will be different. Each plate is also added to `generated_plates.txt` in the folder you run it from.
 
 ---
 
-## 🚀 Improvements
+## Ideas for improvement
 
-- **Customizable Memory Tags**: Allow the user to input a list of memory tags for more control over the number plate generation.
-- **GUI Interface**: Build a graphical user interface (GUI) for easier interaction with the number plate generator.
-- **More Output Formats**: Add options to export generated plates in CSV, JSON, or database formats.
-- **Enhanced Uniqueness Check**: Use `HashSet` for O(1) lookup time to ensure plate uniqueness, combined with persistent storage for cross-session tracking.
-- **Batch Processing**: Support batch generation and submission of number plates to external systems (e.g., oil companies or vehicle registries).
-- **Database Integration**: Use a relational or NoSQL database to store generated plates for better scalability and extensibility.
-- **Date Range Validation**: Ensure the registration date is within valid UK date ranges to prevent invalid plate generation.
-- **Unit Testing**: Implement unit tests (e.g., with JUnit) to improve reliability and catch edge cases.
-- **Internationalization**: Extend the application to support number plate formats for other countries.
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- **User input:** let the user type in the memory tag and date instead of using the examples in `Main`.
+- **Validation:** check that memory tags and dates are valid before generating a plate.
+- **Faster uniqueness check:** keep the saved plates in a `HashSet` for instant lookups.
+- **Unit tests:** add JUnit tests for the age identifier rules and edge cases.
+- **More output formats:** export plates as CSV or JSON, or store them in a database.
+- **A GUI:** a simple window for generating plates.
 
 ---
+
+## License
+
+This project is licensed under the MIT License.
